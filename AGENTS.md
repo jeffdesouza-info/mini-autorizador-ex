@@ -1,30 +1,47 @@
-# Repository Guidelines
+# Diretrizes para agentes — mini-autorizador-ex
 
-## Project Structure & Module Organization
+## Fluxo de trabalho
 
-This repository is a Java 21 Spring Boot API built with Maven. Production code belongs in `src/main/java/br/com/miniautorizador`; the current package placeholders are `cartao`, `idempotencia`, `transacao`, and `shared`. Keep new code grouped by domain, and use `shared` only for genuinely cross-domain concerns. Application resources and Flyway migrations belong in `src/main/resources` and `src/main/resources/db/migration`. Tests mirror production packages under `src/test/java`; test resources go in `src/test/resources`. Local database services are defined in `docker/docker-compose.yml`.
+- Responda e escreva a documentação em Português Brasileiro.
+- Antes de atuar, leia `specs/constitution.md` e os artefatos SDD aplicáveis (`spec.md`, `plan.md` e `tasks.md`), quando disponíveis.
+- Execute somente a tarefa autorizada. Trabalho documental não autoriza implementação; trabalho de implementação não autoriza alterar a governança ou ampliar requisitos.
+- Registre conflitos e lacunas e obtenha uma definição antes de implementar o ponto afetado.
+- Preserve alterações preexistentes. Operações de escrita no GitHub, commits e publicação exigem autorização explícita.
 
-## Build, Test, and Development Commands
+## Organização do projeto
 
-- `.\mvnw.cmd test` compiles the project and runs the Maven test suite.
-- `.\mvnw.cmd package` creates the application package in `target/`.
-- `docker compose -f docker/docker-compose.yml up -d mysql` starts the local MySQL service.
-- `.\mvnw.cmd spring-boot:run` starts the API once its Spring Boot entry point and datasource configuration are present.
+- Código de produção: `src/main/java/br/com/miniautorizador`, nos pacotes `cartao`, `transacao` e `idempotencia`. Reserve `shared` para elementos efetivamente compartilhados.
+- Dentro de cada pacote, respeite as responsabilidades existentes: `domain`, `application` e `adapter`; portas ficam em `application/port/in` e `application/port/out`, conforme necessário.
+- Recursos: `src/main/resources`; migrações Flyway: `src/main/resources/db/migration`, com nomes como `V1__descricao.sql`.
+- Testes: `src/test/java`, espelhando os pacotes de produção; recursos de teste: `src/test/resources`.
+- Serviços locais: `docker/docker-compose.yml`. Não introduza dependências ou módulos sem necessidade da tarefa.
 
-Use the Maven Wrapper so contributors share the Maven version selected by the repository.
+## Escrita e revisão
 
-## Coding Style & Naming Conventions
+- Use quatro espaços, pacotes em minúsculas, tipos em `UpperCamelCase`, métodos e atributos em `lowerCamelCase` e constantes em `UPPER_SNAKE_CASE`.
+- Prefira nomes do domínio e métodos coesos. Remova imports e código sem uso; evite abstrações sem aplicação concreta.
+- Revise as fronteiras arquiteturais e a restrição de fluxo da constituição em todo código Java produzido, inclusive testes.
+- Preserve os contratos públicos e adicione ou ajuste testes quando houver mudança de comportamento.
 
-Use Java 21 and four spaces for indentation; avoid tabs. Keep package names lowercase, types in `UpperCamelCase`, methods and fields in `lowerCamelCase`, and constants in `UPPER_SNAKE_CASE`. Follow the existing domain package boundaries. No formatter or linter is configured in `pom.xml`, so keep formatting consistent with nearby code and remove unused imports.
+## Execução e verificação
 
-## Testing Guidelines
+Use o Maven Wrapper. No Windows, substitua `./mvnw` por `.\mvnw.cmd`.
 
-Tests use the Spring Boot test dependency and run through Maven. Name test classes `*Test.java`, mirror the production package, and cover authorization decisions, idempotency, transaction behavior, and persistence changes. Add or update tests with behavior changes. No coverage threshold is configured.
+| Finalidade | Comando |
+| --- | --- |
+| Executar testes | `./mvnw test` |
+| Gerar o pacote | `./mvnw package` |
+| Executar as verificações configuradas | `./mvnw verify` |
+| Iniciar o MySQL local | `docker compose -f docker/docker-compose.yml up -d mysql` |
+| Iniciar a API | `./mvnw spring-boot:run` |
 
-## Database and Configuration
+- A execução da API depende da classe de entrada e da configuração de conexão implementadas.
+- Em tarefas de código, execute as verificações pertinentes e informe os resultados reais. Diferencie testes executados, ausentes e bloqueados; um build sem testes não comprova comportamento.
+- Alterações de persistência, concorrência e idempotência exigem evidências com MySQL, conforme os princípios da constituição.
 
-Add schema changes as ordered Flyway migrations in `src/main/resources/db/migration`, using names such as `V1__create_cards.sql`. Keep credentials and environment-specific settings out of committed source; use local configuration for development.
+## Documentação e entrega
 
-## Commits and Pull Requests
-
-Recent history uses a parenthesized type tag, for example `(chore) : scaffold/estrutura inicial para o projeto.` Follow that concise pattern with a suitable type such as `(feat)` or `(fix)`. Pull requests should explain the change, list validation commands and results, and call out API, migration, or configuration impacts; link a related issue when one exists.
+- Mantenha cada artefato em seu propósito. Registre decisões e suposições aprovadas no artefato correspondente e sintetize as relevantes no README público.
+- Use o enunciado recebido apenas como fonte de consulta: não o altere, não o copie para o repositório e não publique referências que identifiquem o cliente.
+- Não registre hashes, tags ou referências a revisões do Git nos documentos.
+- Ao concluir, informe arquivos alterados, comportamento ou conteúdo resultante, verificações e pendências. Atualize documentação e estado das tarefas somente quando autorizado.
