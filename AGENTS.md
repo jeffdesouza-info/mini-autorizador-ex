@@ -5,7 +5,8 @@
 - Responda e escreva a documentação em Português Brasileiro.
 - Antes de atuar, leia `specs/constitution.md` e os artefatos SDD aplicáveis (`spec.md`, `plan.md` e `tasks.md`), quando disponíveis.
 - Execute somente a tarefa autorizada. Trabalho documental não autoriza implementação; trabalho de implementação não autoriza alterar a governança ou ampliar requisitos.
-- Registre conflitos e lacunas e obtenha uma definição antes de implementar o ponto afetado.
+- Registre conflitos e lacunas materiais que afetem requisitos, contratos ou princípios e obtenha uma definição antes de implementar o ponto afetado. Interrompa somente a parte afetada e continue atividades independentes autorizadas.
+- Resolva escolhas técnicas rotineiras dentro do plano e do escopo autorizados, sem alterar requisitos, contratos ou princípios; informe as escolhas relevantes na entrega.
 - Preserve alterações preexistentes. Operações de escrita no GitHub, commits e publicação exigem autorização explícita.
 
 ## Organização do projeto
@@ -44,4 +45,5 @@ Use o Maven Wrapper. No Windows, substitua `./mvnw` por `.\mvnw.cmd`.
 - Mantenha cada artefato em seu propósito. Registre decisões e suposições aprovadas no artefato correspondente e sintetize as relevantes no README público.
 - Use o enunciado recebido apenas como fonte de consulta: não o altere, não o copie para o repositório e não publique referências que identifiquem o cliente.
 - Não registre hashes, tags ou referências a revisões do Git nos documentos.
-- Ao concluir, informe arquivos alterados, comportamento ou conteúdo resultante, verificações e pendências. Atualize documentação e estado das tarefas somente quando autorizado.
+- O executor implementa código, configurações e testes e entrega as evidências; o assistente de documentação mantém os artefatos e seus estados quando autorizado.
+- Ao concluir, informe arquivos alterados, comportamento ou conteúdo resultante, verificações e pendências. Diferencie conclusão da implementação e conclusão integral da entrega conforme `tasks.md`.

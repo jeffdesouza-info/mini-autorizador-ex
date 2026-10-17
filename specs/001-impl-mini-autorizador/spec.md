@@ -45,10 +45,10 @@ A idempotência aplica-se a `POST /transacoes`:
 
 | Decisão | Comportamento esperado |
 | --- | --- |
-| P-07 — Identificação | Aceitar o cabeçalho opcional `Idempotency-Key`, no formato UUID, com escopo nessa rota. Sem cabeçalho, cada chamada representa uma nova operação. Coincidência de cartão e valor não identifica repetição. |
-| P-08 — Conteúdo | Comparar `numeroCartao`, `senhaCartao` e o valor numérico; `10` e `10.00` são equivalentes. Durante a retenção, reutilizar a chave com conteúdo diferente resulta em `409`, corpo literal `CHAVE_IDEMPOTENCIA_REUTILIZADA`, sem novo débito. |
+| P-07 — Identificação | Aceitar o cabeçalho opcional `Idempotency-Key`, no formato UUID, com escopo nessa rota. Cabeçalho presente com valor vazio ou UUID inválido resulta em `400`, com `application/json` contendo `codigo` e `mensagem`, sem criar reserva nem executar a autorização. Na ausência do cabeçalho, cada chamada representa uma nova operação independente. Coincidência de cartão e valor não identifica repetição. |
+| P-08 — Conteúdo | Comparar `numeroCartao`, `senhaCartao` e o valor numérico; `10` e `10.00` são equivalentes. Enquanto houver reserva pendente ou resultado concluído vigente, reutilizar a chave com conteúdo diferente resulta em `409`, corpo literal `CHAVE_IDEMPOTENCIA_REUTILIZADA`, sem novo débito. A divergência prevalece sobre a resposta de processamento de P-10. |
 | P-09 — Resultado | Preservar resultados concluídos `201` e `422`, reproduzindo status e corpo sem reexecutar a operação, mesmo que o estado do cartão mude. Não preservar erros de entrada, autenticação ou falhas técnicas como resultados concluídos. |
-| P-10 — Simultaneidade | Para a mesma chave e conteúdo, aguardar até 5 segundos pelo resultado original. Persistindo o processamento, retornar `409`, corpo literal `OPERACAO_EM_PROCESSAMENTO` e cabeçalho `Retry-After: 1`, sem novo débito. Essa resposta transitória não é registrada como resultado concluído. |
+| P-10 — Simultaneidade | Somente para a mesma chave e conteúdo confirmado, aguardar até 5 segundos pelo resultado original. Persistindo o processamento, retornar `409`, corpo literal `OPERACAO_EM_PROCESSAMENTO` e cabeçalho `Retry-After: 1`, sem novo débito. Essa resposta transitória não é registrada como resultado concluído. |
 | P-11 — Retenção | Reter resultados por 24 horas após a conclusão. Após a expiração, a mesma chave representa uma nova operação. Não expirar operações em processamento. |
 
 Durante a retenção, os resultados devem permanecer disponíveis entre instâncias e após reinício. O débito aprovado e seu resultado durável devem permanecer consistentes diante de falhas, sem confirmação parcial. Eventuais retentativas devem ser limitadas e não duplicar efeitos.
@@ -63,5 +63,5 @@ Testes automatizados devem comprovar resultados e invariantes, com alta cobertur
 2. Validações de entrada, preservação de zeros iniciais, precisão monetária e contratos HTTP, incluindo tipos de mídia, corpos vazios e autenticação nas três rotas.
 3. Débitos sucessivos até saldo insuficiente, débito igual ao saldo e precedência existência → senha → saldo, sem alteração do saldo nas recusas.
 4. Persistência após reinício, rollback e concorrência com MySQL e transações/conexões independentes que representem instâncias diferentes.
-5. Idempotência com repetição sequencial, simultânea e após reinício; conteúdo divergente; equivalência numérica; reprodução de aprovações e recusas; espera, retenção e expiração conforme a seção 5.
+5. Idempotência com repetição sequencial, simultânea e após reinício; cabeçalho vazio ou UUID inválido sem efeitos; conteúdo divergente durante processamento, inclusive após reutilização de chave expirada; equivalência numérica; reprodução de aprovações e recusas; retomada de pendências com mais de 24 horas; espera, retenção e expiração conforme a seção 5.
 6. Falhas técnicas diferenciadas das recusas de negócio, sem confirmação parcial nem débito duplicado.
