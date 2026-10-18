@@ -44,6 +44,7 @@ class DatabaseFoundationIT {
     private static final String CARD_NUMBER = "0000000000000001";
     private static final String ROUTE = "POST /transacoes";
 
+    @SuppressWarnings("resource")
     @Container
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:5.7.44")
             .withDatabaseName("miniautorizador_test")
