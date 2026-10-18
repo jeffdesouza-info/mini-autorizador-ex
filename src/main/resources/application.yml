@@ -1,6 +1,12 @@
 spring:
   application:
     name: mini-autorizador-ex
+  jackson:
+    deserialization:
+      use-big-decimal-for-floats: true
+    datatype:
+      json-node:
+        strip-trailing-bigdecimal-zeroes: false
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/miniautorizador?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USERNAME:root}
@@ -19,3 +25,6 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+logging:
+  level:
+    org.springframework.web.servlet.mvc.method.annotation: INFO
