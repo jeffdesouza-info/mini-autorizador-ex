@@ -1,17 +1,19 @@
 package br.com.miniautorizador.idempotencia.adapter.persistence;
 
 import br.com.miniautorizador.idempotencia.application.EsperaConcorrenteIdempotenteException;
-import br.com.miniautorizador.idempotencia.application.IdempotenciaPort;
+import br.com.miniautorizador.idempotencia.application.port.out.IdempotenciaPort;
 import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente;
 import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaExcedidoException;
 import br.com.miniautorizador.shared.adapter.persistence.PrazoEsperaMySql;
 import br.com.miniautorizador.idempotencia.application.ResultadoOperacaoIdempotente;
 import br.com.miniautorizador.transacao.domain.ResultadoAutorizacao;
+import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.springframework.dao.DataAccessException;
@@ -45,9 +47,9 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
     private Reserva criarOuSubstituirReserva(String chave, byte[] impressaoDigital,
             PrazoConcorrenciaIdempotente prazo) {
         try {
-            return novaTransacao().execute(status -> reservarNaTransacao(chave, impressaoDigital, prazo));
+            return transacionar(() -> reservarNaTransacao(chave, impressaoDigital, prazo));
         } catch (DuplicateKeyException disputa) {
-            return novaTransacao().execute(status -> bloquearEReservarSeExpirada(chave, impressaoDigital, prazo));
+            return transacionar(() -> bloquearEReservarSeExpirada(chave, impressaoDigital, prazo));
         }
     }
 
@@ -55,14 +57,11 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
     public Optional<ResultadoOperacaoIdempotente> executar(String chave, long geracaoEsperada,
             byte[] impressaoDigital, PrazoConcorrenciaIdempotente prazo,
             Supplier<ResultadoAutorizacao> autorizacao) {
-        return novaTransacao().execute(status -> {
+        return transacionar(() -> {
             Reserva reservaBloqueada = selecionar(chave, true, prazo);
-            return reservaBloqueada.expirada()
-                    ? Optional.empty()
-                    : Optional.of(reservaBloqueada.geracao() == geracaoEsperada
-                            ? revalidarReserva(chave, reservaBloqueada, impressaoDigital, autorizacao)
-                            : reavaliarGeracaoVigente(chave, reservaBloqueada, impressaoDigital,
-                                    autorizacao));
+            // A geração vigente é sempre revalidada sob bloqueio, mesmo se a esperada ficou obsoleta.
+            return reservaBloqueada.expirada() ? Optional.empty()
+                    : Optional.of(avaliarReservaVigente(chave, reservaBloqueada, impressaoDigital, autorizacao));
         });
     }
 
@@ -98,16 +97,6 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
                 .orElse(atual);
     }
 
-    private ResultadoOperacaoIdempotente revalidarReserva(String chave, Reserva reserva, byte[] digital,
-            Supplier<ResultadoAutorizacao> autorizacao) {
-        return avaliarReservaVigente(chave, reserva, digital, autorizacao);
-    }
-
-    private ResultadoOperacaoIdempotente reavaliarGeracaoVigente(String chave, Reserva reserva,
-            byte[] digital, Supplier<ResultadoAutorizacao> autorizacao) {
-        return avaliarReservaVigente(chave, reserva, digital, autorizacao);
-    }
-
     private ResultadoOperacaoIdempotente avaliarReservaVigente(String chave, Reserva reserva, byte[] digital,
             Supplier<ResultadoAutorizacao> autorizacao) {
         return Optional.of(reserva)
@@ -128,7 +117,7 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
                         statement.setBytes(3, digital);
                         PrazoEsperaMySql.aplicar(statement, prazo);
                     });
-        } catch (DataAccessException falha) {
+        } catch (DataAccessException | PrazoConcorrenciaExcedidoException falha) {
             throw classificarEspera(falha);
         }
         return selecionar(chave, false, null);
@@ -178,7 +167,7 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
                     "CONCLUIDA".equals(resultSet.getString("estado")),
                     (Integer) resultSet.getObject("status_http"), resultSet.getString("corpo_resposta"),
                     resultSet.getString("tipo_midia"), resultSet.getBoolean("expirada")));
-        } catch (DataAccessException falha) {
+        } catch (DataAccessException | PrazoConcorrenciaExcedidoException falha) {
             throw bloquear ? classificarEspera(falha) : falha;
         }
     }
@@ -190,7 +179,27 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
         return transacao;
     }
 
-    private RuntimeException classificarEspera(DataAccessException falha) {
+    private <T> T transacionar(Supplier<T> operacao) {
+        AtomicReference<RuntimeException> falhaOperacao = new AtomicReference<>();
+        try {
+            return novaTransacao().execute(status -> {
+                try {
+                    return operacao.get();
+                } catch (RuntimeException falha) {
+                    falhaOperacao.set(falha);
+                    throw falha;
+                }
+            });
+        } catch (RuntimeException falhaNoEncerramento) {
+            // Uma conexão encerrada por timeout também pode recusar o rollback JDBC.
+            // Preservar a falha da operação permite distinguir a espera da falha técnica.
+            RuntimeException original = Optional.ofNullable(falhaOperacao.get()).orElse(falhaNoEncerramento);
+            Optional.of(falhaNoEncerramento).filter(falha -> falha != original).ifPresent(original::addSuppressed);
+            throw original;
+        }
+    }
+
+    private RuntimeException classificarEspera(RuntimeException falha) {
         return Optional.of(falha)
                 .filter(excecao -> excecao instanceof PrazoConcorrenciaExcedidoException
                         || ehTimeoutDeBloqueioMysql(excecao))
@@ -200,8 +209,8 @@ public class JdbcIdempotenciaAdapter implements IdempotenciaPort {
 
     private boolean ehTimeoutDeBloqueioMysql(Throwable falha) {
         return Stream.iterate(falha, Objects::nonNull, Throwable::getCause)
-                .filter(SQLException.class::isInstance)
-                .map(SQLException.class::cast)
-                .anyMatch(excecao -> excecao.getErrorCode() == 1205 || excecao instanceof SQLTimeoutException);
+                .anyMatch(excecao -> excecao instanceof SocketTimeoutException
+                        || excecao instanceof SQLTimeoutException
+                        || excecao instanceof SQLException sql && sql.getErrorCode() == 1205);
     }
 }

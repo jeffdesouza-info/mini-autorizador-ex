@@ -3,6 +3,7 @@ package br.com.miniautorizador;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.mysql.cj.jdbc.JdbcConnection;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,6 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
@@ -36,6 +38,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 @Testcontainers
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class DatabaseFoundationIT {
 
     private static final String CARD_NUMBER = "0000000000000001";
@@ -83,6 +86,23 @@ class DatabaseFoundationIT {
         }
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1", Integer.class)).isEqualTo(2);
+    }
+
+    @Test
+    void prazoDeRedeERestauradoAoDevolverConexaoAoPool() throws SQLException {
+        JdbcConnection fisica;
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT 1")) {
+            fisica = connection.unwrap(JdbcConnection.class);
+            br.com.miniautorizador.shared.adapter.persistence.PrazoEsperaMySql.aplicar(statement,
+                    br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente.iniciar());
+            assertThat(connection.getNetworkTimeout()).isBetween(1, 5000);
+            try (ResultSet resultado = statement.executeQuery()) {
+                assertThat(resultado.next()).isTrue();
+                assertThat(resultado.getInt(1)).isEqualTo(1);
+            }
+        }
+        assertThat(fisica.getNetworkTimeout()).isZero();
     }
 
     @Test

@@ -1,6 +1,9 @@
 package br.com.miniautorizador.idempotencia.application;
 
-import br.com.miniautorizador.shared.adapter.web.InvalidRequestException;
+import br.com.miniautorizador.cartao.domain.ValidacaoCartao;
+import br.com.miniautorizador.idempotencia.application.port.out.IdempotenciaPort;
+import br.com.miniautorizador.shared.application.InvalidRequestException;
+import br.com.miniautorizador.shared.domain.RegrasMonetarias;
 import br.com.miniautorizador.transacao.application.port.in.AutorizarTransacaoUseCase;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -38,6 +41,9 @@ public class AutorizarTransacaoIdempotenteUseCase {
             BigDecimal valor) {
         PrazoConcorrenciaIdempotente prazo = PrazoConcorrenciaIdempotente.iniciar();
         String uuid = normalizar(chave);
+        ValidacaoCartao.exigirNumeroCartao(numeroCartao);
+        ValidacaoCartao.exigirSenha(senhaCartao);
+        valor = RegrasMonetarias.debito(valor);
         byte[] digital = imprimir(numeroCartao, senhaCartao, valor);
         try {
             IdempotenciaPort.Reserva reserva = idempotenciaPort.reservar(uuid, digital, prazo);

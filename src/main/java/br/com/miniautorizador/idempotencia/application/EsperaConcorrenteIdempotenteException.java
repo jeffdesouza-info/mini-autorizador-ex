@@ -1,8 +1,8 @@
 package br.com.miniautorizador.idempotencia.application;
 
-import org.springframework.dao.TransientDataAccessException;
+public class EsperaConcorrenteIdempotenteException extends RuntimeException {
 
-public class EsperaConcorrenteIdempotenteException extends TransientDataAccessException {
+    private static final long serialVersionUID = 1L;
 
     public EsperaConcorrenteIdempotenteException(Throwable causa) {
         super("A reserva idempotente permaneceu bloqueada por outra execução.", causa);

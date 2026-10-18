@@ -1,6 +1,7 @@
 package br.com.miniautorizador.shared.adapter.web;
 
 import br.com.miniautorizador.cartao.domain.ValidacaoCartao;
+import br.com.miniautorizador.shared.application.InvalidRequestException;
 import br.com.miniautorizador.shared.domain.RegrasMonetarias;
 import java.math.BigDecimal;
 import java.util.Optional;

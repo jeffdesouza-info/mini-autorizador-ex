@@ -13,7 +13,7 @@ import br.com.miniautorizador.cartao.application.port.out.CartaoPort;
 import br.com.miniautorizador.cartao.application.port.out.SenhaCartaoPort;
 import br.com.miniautorizador.transacao.application.port.in.AutorizarTransacaoUseCase;
 import br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase;
-import br.com.miniautorizador.idempotencia.application.IdempotenciaPort;
+import br.com.miniautorizador.idempotencia.application.port.out.IdempotenciaPort;
 import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente;
 import br.com.miniautorizador.idempotencia.application.ResultadoOperacaoIdempotente;
 import br.com.miniautorizador.transacao.domain.MotivoRecusa;
@@ -46,6 +46,7 @@ import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -60,6 +61,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @Testcontainers
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class MiniAutorizadorHttpIT {
 
     private static final String CARTAO = "0000000000000001";
@@ -67,8 +69,9 @@ class MiniAutorizadorHttpIT {
     private static final String CREDENCIAL = "Basic " + Base64.getEncoder()
             .encodeToString("username:password".getBytes(StandardCharsets.UTF_8));
 
-@SuppressWarnings("resource")
-@Container
+    // A extensão Testcontainers encerra o recurso ao fim desta classe.
+    @SuppressWarnings("resource")
+    @Container
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:5.7.44")
             .withDatabaseName("miniautorizador_http_test")
             .withUsername("test")
@@ -739,11 +742,10 @@ class MiniAutorizadorHttpIT {
         String chave = java.util.UUID.randomUUID().toString();
         AtomicBoolean primeiraResposta = new AtomicBoolean(true);
         org.mockito.Mockito.doAnswer(invocacao -> {
-            Optional<ResultadoOperacaoIdempotente> resultado = (Optional<ResultadoOperacaoIdempotente>)
-                    invocacao.callRealMethod();
+            Object resultado = invocacao.callRealMethod();
             return Optional.of(primeiraResposta.getAndSet(false))
                     .filter(Boolean::booleanValue)
-                    .<Optional<ResultadoOperacaoIdempotente>>map(ignorado -> falharRespostaAposCommitOpcional())
+                    .<Object>map(ignorado -> falharRespostaAposCommitOpcional())
                     .orElse(resultado);
         }).when(idempotenciaPort).executar(org.mockito.ArgumentMatchers.eq(chave),
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(byte[].class),
@@ -772,11 +774,10 @@ class MiniAutorizadorHttpIT {
         String chave = java.util.UUID.randomUUID().toString();
         AtomicBoolean primeiraResposta = new AtomicBoolean(true);
         org.mockito.Mockito.doAnswer(invocacao -> {
-            Optional<ResultadoOperacaoIdempotente> resultado = (Optional<ResultadoOperacaoIdempotente>)
-                    invocacao.callRealMethod();
+            Object resultado = invocacao.callRealMethod();
             return Optional.of(primeiraResposta.getAndSet(false))
                     .filter(Boolean::booleanValue)
-                    .<Optional<ResultadoOperacaoIdempotente>>map(ignorado -> falharRespostaAposCommitOpcional())
+                    .<Object>map(ignorado -> falharRespostaAposCommitOpcional())
                     .orElse(resultado);
         }).when(idempotenciaPort).executar(org.mockito.ArgumentMatchers.eq(chave),
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(byte[].class),
@@ -891,7 +892,7 @@ class MiniAutorizadorHttpIT {
     void deadlockDeChaveNaoGeraResultadoConcluidoNemRetentativaAutomatica() throws Exception {
         criarCartao(CARTAO, SENHA);
         String chave = java.util.UUID.randomUUID().toString();
-        org.mockito.Mockito.doThrow(new org.springframework.dao.DeadlockLoserDataAccessException(
+        org.mockito.Mockito.doThrow(new org.springframework.dao.CannotAcquireLockException(
                 "deadlock simulado", null)).doCallRealMethod()
                 .when(cartaoPort).debitarSaldo(CARTAO, new BigDecimal("1.00"));
 
@@ -917,6 +918,60 @@ class MiniAutorizadorHttpIT {
 
         org.mockito.Mockito.verify(autorizarTransacaoUseCase, org.mockito.Mockito.times(1))
                 .executar(CARTAO, SENHA, new BigDecimal("1.00"));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotencia", Integer.class)).isZero();
+        assertThat(saldoAtual()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void falhaAntesDoCommitReverteDebitoEResultadoConcluido() throws Exception {
+        criarCartao(CARTAO, SENHA);
+        String chave = java.util.UUID.randomUUID().toString();
+        org.mockito.Mockito.doAnswer(invocacao -> {
+            Object resultado = invocacao.callRealMethod();
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void beforeCommit(boolean somenteLeitura) {
+                            assertThat(jdbcTemplate.queryForObject(
+                                    "SELECT estado FROM idempotencia WHERE chave = ?", String.class, chave))
+                                    .isEqualTo("CONCLUIDA");
+                            throw new IllegalStateException("falha simulada antes do commit");
+                        }
+                    });
+            return resultado;
+        }).doCallRealMethod().when(cartaoPort).debitarSaldo(CARTAO, new BigDecimal("1.00"));
+
+        transacaoComChave(CARTAO, SENHA, "1.00", chave).andExpect(status().isInternalServerError());
+        assertThat(saldoAtual()).isEqualByComparingTo("500.00");
+        assertThat(jdbcTemplate.queryForMap("SELECT estado, status_http FROM idempotencia WHERE chave = ?", chave))
+                .containsEntry("estado", "PENDENTE").containsEntry("status_http", null);
+
+        transacaoComChave(CARTAO, SENHA, "1.00", chave).andExpect(status().isCreated());
+        transacaoComChave(CARTAO, SENHA, "1.00", chave).andExpect(status().isCreated());
+        assertThat(saldoAtual()).isEqualByComparingTo("499.00");
+    }
+
+    @Test
+    void entradaInvalidaDiretaNaoPersisteReservaNemDebita() throws Exception {
+        criarCartao(CARTAO, SENHA);
+        var casoDeUso = webApplicationContext.getBean(AutorizarTransacaoIdempotenteUseCase.class);
+        assertThatThrownBy(() -> casoDeUso.executar(java.util.UUID.randomUUID().toString(), CARTAO, SENHA,
+                new BigDecimal("1.001"))).isInstanceOf(IllegalArgumentException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotencia", Integer.class)).isZero();
+        assertThat(saldoAtual()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void prazoTecnicoExcedidoRetorna503SemConfundirComRecusa() throws Exception {
+        criarCartao(CARTAO, SENHA);
+        String chave = java.util.UUID.randomUUID().toString();
+        org.mockito.Mockito.doThrow(new br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaExcedidoException())
+                .when(idempotenciaPort).reservar(org.mockito.ArgumentMatchers.eq(chave),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+        transacaoComChave(CARTAO, SENHA, "1.00", chave).andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.codigo").value("SERVICO_INDISPONIVEL"));
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM idempotencia", Integer.class)).isZero();
         assertThat(saldoAtual()).isEqualByComparingTo("500.00");
     }

@@ -1,8 +1,8 @@
 package br.com.miniautorizador.idempotencia.application;
 
-import org.springframework.dao.TransientDataAccessException;
+public class PrazoConcorrenciaExcedidoException extends RuntimeException {
 
-public class PrazoConcorrenciaExcedidoException extends TransientDataAccessException {
+    private static final long serialVersionUID = 1L;
 
     public PrazoConcorrenciaExcedidoException() {
         super("O prazo para iniciar ou revalidar a reserva idempotente foi excedido.");

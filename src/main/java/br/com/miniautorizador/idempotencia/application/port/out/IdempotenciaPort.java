@@ -1,8 +1,10 @@
-package br.com.miniautorizador.idempotencia.application;
+package br.com.miniautorizador.idempotencia.application.port.out;
 
+import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente;
+import br.com.miniautorizador.idempotencia.application.ResultadoOperacaoIdempotente;
+import br.com.miniautorizador.transacao.domain.ResultadoAutorizacao;
 import java.util.Optional;
 import java.util.function.Supplier;
-import br.com.miniautorizador.transacao.domain.ResultadoAutorizacao;
 
 public interface IdempotenciaPort {
 

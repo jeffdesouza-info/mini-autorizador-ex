@@ -24,25 +24,8 @@ class CartaoEntity {
     protected CartaoEntity() {
     }
 
-    CartaoEntity(String numeroCartao, String senhaHash, BigDecimal saldo) {
-        this.numeroCartao = numeroCartao;
-        this.senhaHash = senhaHash;
-        this.saldo = saldo;
-    }
-
     Cartao paraDominio() {
         return new Cartao(numeroCartao, senhaHash, saldo);
     }
 
-    String numeroCartao() {
-        return numeroCartao;
-    }
-
-    String senhaHash() {
-        return senhaHash;
-    }
-
-    BigDecimal saldo() {
-        return saldo;
-    }
 }

@@ -1,6 +1,10 @@
 package br.com.miniautorizador.shared.adapter.web;
 
+import br.com.miniautorizador.shared.application.InvalidRequestException;
+import br.com.miniautorizador.idempotencia.application.EsperaConcorrenteIdempotenteException;
+import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaExcedidoException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.RecoverableDataAccessException;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,7 +21,9 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "A requisição contém dados inválidos.");
     }
 
-    @ExceptionHandler({DataAccessResourceFailureException.class, TransientDataAccessException.class})
+    @ExceptionHandler({DataAccessResourceFailureException.class, TransientDataAccessException.class,
+            RecoverableDataAccessException.class,
+            EsperaConcorrenteIdempotenteException.class, PrazoConcorrenciaExcedidoException.class})
     public ResponseEntity<ApiError> servicoIndisponivel(Exception excecao) {
         return resposta(HttpStatus.SERVICE_UNAVAILABLE, "SERVICO_INDISPONIVEL",
                 "O serviço está temporariamente indisponível.");

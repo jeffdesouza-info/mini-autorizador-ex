@@ -2,6 +2,7 @@ package br.com.miniautorizador.shared.adapter.web;
 
 import br.com.miniautorizador.cartao.application.port.in.ConsultarSaldoUseCase;
 import br.com.miniautorizador.cartao.application.port.in.CriarCartaoUseCase;
+import br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase;
 import br.com.miniautorizador.transacao.application.port.in.AutorizarTransacaoUseCase;
 import tools.jackson.databind.JsonNode;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +19,13 @@ public class CartoesController {
     private final CriarCartaoUseCase criarCartaoUseCase;
     private final ConsultarSaldoUseCase consultarSaldoUseCase;
     private final AutorizarTransacaoUseCase autorizarTransacaoUseCase;
-    private final br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase idempotenteUseCase;
+    private final AutorizarTransacaoIdempotenteUseCase idempotenteUseCase;
     private final ApiRequestParser requestParser;
     private final ApiResponseTranslator responseTranslator;
 
     public CartoesController(CriarCartaoUseCase criarCartaoUseCase, ConsultarSaldoUseCase consultarSaldoUseCase,
             AutorizarTransacaoUseCase autorizarTransacaoUseCase,
-            br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase idempotenteUseCase,
+            AutorizarTransacaoIdempotenteUseCase idempotenteUseCase,
             ApiRequestParser requestParser,
             ApiResponseTranslator responseTranslator) {
         this.criarCartaoUseCase = criarCartaoUseCase;
@@ -52,8 +53,8 @@ public class CartoesController {
             @RequestHeader(name = "Idempotency-Key", required = false) String chave) {
         ApiRequestParser.DadosTransacao entrada = requestParser.transacao(corpo);
         return java.util.Optional.ofNullable(chave)
-                .map(valor -> idempotenteUseCase.executar(valor, entrada.numeroCartao(), entrada.senhaCartao(),
-                        entrada.valor()).paraHttp())
+                .map(valor -> responseTranslator.transacao(idempotenteUseCase.executar(valor,
+                        entrada.numeroCartao(), entrada.senhaCartao(), entrada.valor())))
                 .orElseGet(() -> responseTranslator.transacao(
                         autorizarTransacaoUseCase.executar(entrada.numeroCartao(), entrada.senhaCartao(),
                                 entrada.valor())));

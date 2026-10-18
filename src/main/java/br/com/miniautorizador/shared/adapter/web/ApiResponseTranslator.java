@@ -1,9 +1,11 @@
 package br.com.miniautorizador.shared.adapter.web;
 
 import br.com.miniautorizador.cartao.application.port.in.ResultadoCriacaoCartao;
+import br.com.miniautorizador.idempotencia.application.ResultadoOperacaoIdempotente;
 import br.com.miniautorizador.transacao.domain.ResultadoAutorizacao;
 import java.math.BigDecimal;
 import java.util.Optional;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,14 @@ class ApiResponseTranslator {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.CREATED)
                         .contentType(MediaType.TEXT_PLAIN)
                         .body("OK"));
+    }
+
+    ResponseEntity<String> transacao(ResultadoOperacaoIdempotente resultado) {
+        ResponseEntity.BodyBuilder resposta = ResponseEntity.status(resultado.status())
+                .contentType(MediaType.parseMediaType(resultado.tipoMidia()));
+        return resultado.emProcessamento()
+                ? resposta.header(HttpHeaders.RETRY_AFTER, "1").body(resultado.corpo())
+                : resposta.body(resultado.corpo());
     }
 
     record RespostaCartao(String senha, String numeroCartao) {

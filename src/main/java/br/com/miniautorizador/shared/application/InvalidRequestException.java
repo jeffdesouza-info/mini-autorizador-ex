@@ -1,4 +1,4 @@
-package br.com.miniautorizador.shared.adapter.web;
+package br.com.miniautorizador.shared.application;
 
 public final class InvalidRequestException extends RuntimeException {
 
