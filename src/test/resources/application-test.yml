@@ -1,3 +1,5 @@
+idempotencia:
+  segredo-hmac: segredo-de-teste-compartilhado-com-32-bytes
 spring:
   flyway:
     enabled: true

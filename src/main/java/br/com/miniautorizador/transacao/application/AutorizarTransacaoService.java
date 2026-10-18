@@ -4,14 +4,14 @@ import br.com.miniautorizador.cartao.application.port.out.CartaoPort;
 import br.com.miniautorizador.cartao.application.port.out.SenhaCartaoPort;
 import br.com.miniautorizador.cartao.domain.Cartao;
 import br.com.miniautorizador.cartao.domain.ValidacaoCartao;
+import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente;
 import br.com.miniautorizador.shared.domain.RegrasMonetarias;
 import br.com.miniautorizador.transacao.application.port.in.AutorizarTransacaoUseCase;
 import br.com.miniautorizador.transacao.domain.AuthorizationContext;
 import br.com.miniautorizador.transacao.domain.AuthorizationPolicyEvaluator;
-import br.com.miniautorizador.transacao.domain.MotivoRecusa;
 import br.com.miniautorizador.transacao.domain.ResultadoAutorizacao;
-import java.util.Optional;
 import java.math.BigDecimal;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,10 +33,24 @@ public class AutorizarTransacaoService implements AutorizarTransacaoUseCase {
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ResultadoAutorizacao executar(String numeroCartao, String senhaCartao, BigDecimal valor) {
+        return executarComPrazo(numeroCartao, senhaCartao, valor, Optional.empty());
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ResultadoAutorizacao executar(String numeroCartao, String senhaCartao, BigDecimal valor,
+            PrazoConcorrenciaIdempotente prazo) {
+        return executarComPrazo(numeroCartao, senhaCartao, valor, Optional.of(prazo));
+    }
+
+    private ResultadoAutorizacao executarComPrazo(String numeroCartao, String senhaCartao, BigDecimal valor,
+            Optional<PrazoConcorrenciaIdempotente> prazo) {
         String numeroValidado = ValidacaoCartao.exigirNumeroCartao(numeroCartao);
         String senhaValidada = ValidacaoCartao.exigirSenha(senhaCartao);
         BigDecimal valorValidado = RegrasMonetarias.debito(valor);
-        Optional<Cartao> cartao = cartaoPort.bloquearParaAutorizacao(numeroValidado);
+        Optional<Cartao> cartao = prazo
+                .map(limite -> cartaoPort.bloquearParaAutorizacao(numeroValidado, limite))
+                .orElseGet(() -> cartaoPort.bloquearParaAutorizacao(numeroValidado));
         boolean senhaValida = cartao.map(candidato -> senhaCartaoPort.corresponde(senhaValidada, candidato.senhaHash()))
                 .orElse(false);
         AuthorizationContext contexto = new AuthorizationContext(cartao, senhaValida, valorValidado);

@@ -2,6 +2,8 @@ package br.com.miniautorizador.cartao.adapter.persistence;
 
 import br.com.miniautorizador.cartao.application.port.out.CartaoPort;
 import br.com.miniautorizador.cartao.domain.Cartao;
+import br.com.miniautorizador.idempotencia.application.PrazoConcorrenciaIdempotente;
+import br.com.miniautorizador.shared.adapter.persistence.PrazoEsperaMySql;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
@@ -40,6 +42,17 @@ public class CartaoPersistenceAdapter implements CartaoPort {
     @Override
     public Optional<Cartao> bloquearParaAutorizacao(String numeroCartao) {
         return repository.buscarParaAtualizacao(numeroCartao).map(CartaoEntity::paraDominio);
+    }
+
+    @Override
+    public Optional<Cartao> bloquearParaAutorizacao(String numeroCartao, PrazoConcorrenciaIdempotente prazo) {
+        return jdbcTemplate.query("SELECT numero_cartao, senha_hash, saldo FROM cartao "
+                + "WHERE numero_cartao = ? FOR UPDATE", statement -> {
+                    statement.setString(1, numeroCartao);
+                    PrazoEsperaMySql.aplicar(statement, prazo);
+                }, (resultado, linha) -> new Cartao(resultado.getString("numero_cartao"),
+                        resultado.getString("senha_hash"), resultado.getBigDecimal("saldo")))
+                .stream().findFirst();
     }
 
     @Override

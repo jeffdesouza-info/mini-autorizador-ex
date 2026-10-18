@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -17,15 +18,19 @@ public class CartoesController {
     private final CriarCartaoUseCase criarCartaoUseCase;
     private final ConsultarSaldoUseCase consultarSaldoUseCase;
     private final AutorizarTransacaoUseCase autorizarTransacaoUseCase;
+    private final br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase idempotenteUseCase;
     private final ApiRequestParser requestParser;
     private final ApiResponseTranslator responseTranslator;
 
     public CartoesController(CriarCartaoUseCase criarCartaoUseCase, ConsultarSaldoUseCase consultarSaldoUseCase,
-            AutorizarTransacaoUseCase autorizarTransacaoUseCase, ApiRequestParser requestParser,
+            AutorizarTransacaoUseCase autorizarTransacaoUseCase,
+            br.com.miniautorizador.idempotencia.application.AutorizarTransacaoIdempotenteUseCase idempotenteUseCase,
+            ApiRequestParser requestParser,
             ApiResponseTranslator responseTranslator) {
         this.criarCartaoUseCase = criarCartaoUseCase;
         this.consultarSaldoUseCase = consultarSaldoUseCase;
         this.autorizarTransacaoUseCase = autorizarTransacaoUseCase;
+        this.idempotenteUseCase = idempotenteUseCase;
         this.requestParser = requestParser;
         this.responseTranslator = responseTranslator;
     }
@@ -43,9 +48,14 @@ public class CartoesController {
     }
 
     @PostMapping("/transacoes")
-    public ResponseEntity<String> autorizar(@RequestBody JsonNode corpo) {
+    public ResponseEntity<String> autorizar(@RequestBody JsonNode corpo,
+            @RequestHeader(name = "Idempotency-Key", required = false) String chave) {
         ApiRequestParser.DadosTransacao entrada = requestParser.transacao(corpo);
-        return responseTranslator.transacao(
-                autorizarTransacaoUseCase.executar(entrada.numeroCartao(), entrada.senhaCartao(), entrada.valor()));
+        return java.util.Optional.ofNullable(chave)
+                .map(valor -> idempotenteUseCase.executar(valor, entrada.numeroCartao(), entrada.senhaCartao(),
+                        entrada.valor()).paraHttp())
+                .orElseGet(() -> responseTranslator.transacao(
+                        autorizarTransacaoUseCase.executar(entrada.numeroCartao(), entrada.senhaCartao(),
+                                entrada.valor())));
     }
 }

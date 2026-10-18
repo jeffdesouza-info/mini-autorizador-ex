@@ -28,3 +28,5 @@ spring:
 logging:
   level:
     org.springframework.web.servlet.mvc.method.annotation: INFO
+idempotencia:
+  segredo-hmac: ${IDEMPOTENCY_HMAC_SECRET}
