@@ -1,6 +1,6 @@
 # Tarefas — mini-autorizador-ex
 
-Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 e T002 estão concluídas; T003 a T011 permanecem pendentes. Os contratos e as decisões permanecem nas fontes citadas.
+Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 a T006 estão concluídas; T007 a T011 permanecem pendentes. Os contratos e as decisões permanecem nas fontes citadas.
 
 ## 1. Execução por blocos
 
@@ -31,12 +31,20 @@ Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../c
 
 | ID | Estado | Trabalho previsto | Aceite verificável |
 | --- | --- | --- | --- |
-| T003 | Pendente | Implementar modelos, resultados, políticas ordenadas e portas de cartão, autorização e senha; implementar BCrypt no adaptador. | Testes unitários comprovam precisão monetária, invariantes e precedência das recusas; domínio independente de frameworks e sem os comandos Java proibidos. |
-| T004 | Pendente | Implementar criação e consulta, adaptadores MySQL e REST, mapeamentos e BASIC sem sessão. | Testes HTTP/MySQL cobrem RF-01 a RF-03 e RF-06, duplicidade sequencial e simultânea, senha recebida na resposta e preservação dos dados existentes. Senhas persistidas como hash; `401` vazio nas três rotas. |
-| T005 | Pendente | Implementar autorização sem cabeçalho, com bloqueio de cartão, atualização defensiva e fronteira transacional conforme o plano. | Testes comprovam RF-04 e RF-05, débitos sucessivos, débito igual ao saldo e recusas sem alteração. Duas operações independentes de R$ 10,00 sobre saldo de R$ 10,00 geram uma aprovação, uma recusa e saldo zero entre contextos distintos. |
-| T006 | Pendente | Completar validação estrita das entradas e tradução centralizada dos resultados e falhas para HTTP. | Testes das três rotas cobrem P-01 a P-06 e P-12: tipos JSON, zeros iniciais, valor sem arredondamento, corpos e mídias exatos, saldo com ponto e duas casas, autenticação sem efeitos e falhas técnicas distintas das recusas. |
+| T003 | Concluída | Implementar modelos com campos Java diretos, validações reutilizáveis, resultados, políticas ordenadas e portas de cartão, autorização e senha; implementar BCrypt no adaptador. | Testes unitários comprovam precisão monetária, invariantes e precedência das recusas; domínio independente de frameworks e sem os comandos Java proibidos. |
+| T004 | Concluída | Implementar criação e consulta, adaptadores MySQL e REST, mapeamentos e BASIC sem sessão. | Testes HTTP/MySQL cobrem RF-01 a RF-03 e RF-06, duplicidade sequencial e simultânea, senha recebida na resposta e preservação dos dados existentes. Senhas persistidas como hash; `401` vazio nas três rotas. |
+| T005 | Concluída | Implementar autorização sem cabeçalho, com bloqueio de cartão, atualização defensiva e fronteira transacional conforme o plano. | Testes comprovam RF-04 e RF-05, débitos sucessivos, débito igual ao saldo e recusas sem alteração. Duas operações independentes de R$ 10,00 sobre saldo de R$ 10,00 geram uma aprovação, uma recusa e saldo zero entre contextos distintos. |
+| T006 | Concluída | Completar validação estrita das entradas e tradução centralizada dos resultados e falhas para HTTP. | Testes das três rotas cobrem P-01 a P-06 e P-12: tipos JSON, zeros iniciais, valor sem arredondamento, corpos e mídias exatos, saldo com ponto e duas casas, autenticação sem efeitos e falhas técnicas distintas das recusas. |
 
 **Saída do bloco:** contrato original utilizável, persistente e protegido contra débitos concorrentes.
+
+**Conclusão do bloco:** T003 a T006 concluídas e aceitas em 17/10/2026, após revisão dos fontes e das evidências de `evidencias-bloco-2-t006.zip`. O log de `.\mvnw.cmd clean verify` registra `BUILD SUCCESS`, pacote gerado e 33 testes aprovados: 15 unitários e 18 de integração, sem falhas, erros ou testes ignorados, com MySQL 5.7.44. A restrição de fluxo passou. JaCoCo: 210/221 linhas (95,0%) e 37/42 ramos (88,1%).
+
+**Decisão consolidada:** campos `String` para número, senha recebida e hash; `BigDecimal` para saldo e débito, com validações em `ValidacaoCartao` e `RegrasMonetarias`. A revisão de T006 comprovou precisão e escala desde o JSON, rejeição de casas excedentes sem débito, aceitação de `10` e `10.00`, BASIC inválido nas três rotas e respostas `500`/`503` pelo MVC. Modelos e DTOs ocultam senha/hash nas representações textuais.
+
+**Evidências examinadas:** `src/`, `pom.xml`, `target/surefire-reports/`, `target/failsafe-reports/`, `target/site/jacoco/` e `mini-autorizador-clean-verify-t006.log`, reunidos no pacote citado. O aceite decorre da conferência desses arquivos; o revisor não reexecutou o Maven. O responsável também informou nova execução local de `clean verify` sem falhas.
+
+Sem pendências impeditivas do Bloco 2. A revisão geral e a documentação final permanecem em T010 e T011; o Bloco 3 ainda não foi executado.
 
 ## 4. Bloco 3 — Idempotência e recuperação
 
@@ -52,10 +60,11 @@ Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../c
 
 | ID | Estado | Trabalho previsto | Aceite verificável |
 | --- | --- | --- | --- |
-| T010 | Pendente | Revisar fronteiras arquiteturais, legibilidade e proteção de dados sensíveis. Executar `./mvnw verify`, corrigir falhas e conferir os seis grupos de aceite do `spec.md`. | Suíte unitária, HTTP e MySQL executada; cobertura JaCoCo examinada e lacunas relevantes corrigidas; restrição de fluxo aprovada em produção e testes; pacote gerado. Testes ausentes ou bloqueados não são apresentados como aprovados. |
+| T010 | Pendente | Revisar fronteiras arquiteturais, legibilidade, APIs depreciadas, avisos de recursos e proteção de dados sensíveis. Executar `./mvnw verify`, corrigir falhas e conferir os seis grupos de aceite do `spec.md`. | Suíte unitária, HTTP e MySQL executada; cobertura JaCoCo examinada e lacunas relevantes corrigidas; restrição de fluxo aprovada em produção e testes; pacote gerado. Testes ausentes ou bloqueados não são apresentados como aprovados. |
 | T011 | Pendente | Consolidar o README com base no resultado verificado: preparação, configuração, execução, testes, exemplos e decisões relevantes. Atualizar o estado das tarefas com as evidências recebidas. | Instruções correspondem aos comandos e comportamentos comprovados; exemplos incluem chamadas com e sem chave; requisitos de segredo compartilhado e limites conhecidos estão claros, sem dados privados. |
 
 Ao encerrar cada bloco, devolver um relatório curto com status, resultado, arquivos alterados, verificações executadas, localização das evidências e pendências. Na interrupção, indicar o próximo passo para retomada.
 
 A implementação está concluída após T001 a T010 verificadas e a entrega das evidências pelo executor. Nesse encerramento, informar a T011 como pendente do assistente de documentação. A conclusão integral da entrega ocorre após T001 a T011 verificadas.
+
 
