@@ -1,6 +1,6 @@
 # Tarefas — mini-autorizador-ex
 
-Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 a T006 estão concluídas; T007 a T011 permanecem pendentes. Os contratos e as decisões permanecem nas fontes citadas.
+Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 a T009 estão concluídas; T010 e T011 permanecem pendentes. Os contratos e as decisões permanecem nas fontes citadas.
 
 ## 1. Execução por blocos
 
@@ -44,17 +44,26 @@ Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../c
 
 **Evidências examinadas:** `src/`, `pom.xml`, `target/surefire-reports/`, `target/failsafe-reports/`, `target/site/jacoco/` e `mini-autorizador-clean-verify-t006.log`, reunidos no pacote citado. O aceite decorre da conferência desses arquivos; o revisor não reexecutou o Maven. O responsável também informou nova execução local de `clean verify` sem falhas.
 
-Sem pendências impeditivas do Bloco 2. A revisão geral e a documentação final permanecem em T010 e T011; o Bloco 3 ainda não foi executado.
+Sem pendências impeditivas do Bloco 2. A revisão geral e a documentação final permanecem em T010 e T011.
 
 ## 4. Bloco 3 — Idempotência e recuperação
 
 | ID | Estado | Trabalho previsto | Aceite verificável |
 | --- | --- | --- | --- |
-| T007 | Pendente | Implementar identificação opcional, normalização, HMAC com segredo persistente compartilhado, reserva durável com geração interna e execução com resultado na mesma transação do débito. Integrar ao endpoint. | Testes HTTP/MySQL cobrem P-07 a P-09: cabeçalho vazio ou UUID inválido retorna `400` sem reserva nem autorização; equivalência numérica; divergência de conteúdo; reprodução de aprovações e recusas após mudança do cartão ou reinício. Sem chave, chamadas continuam independentes; entradas inválidas e falhas não viram resultados concluídos. |
-| T008 | Pendente | Implementar comparação de conteúdo antes da espera, disputas e revalidação da geração sob bloqueio, prazo único, retenção, publicação de nova reserva após expiração e retomada exclusiva de pendências. | Testes coordenados entre contextos independentes comprovam P-08, P-10 e P-11: conteúdo divergente durante processamento retorna `CHAVE_IDEMPOTENCIA_REUTILIZADA`, inclusive após reutilização de chave expirada; mesmo conteúdo recebe resultado dentro da espera ou resposta transitória com cabeçalho correto no limite total de 5 segundos. Comprovar retenção de 24 horas, ausência de expiração de pendências e débito único. |
-| T009 | Pendente | Completar tratamento de deadlock, rollback, commit incerto e recuperação após falhas, respeitando os limites de retentativa e a continuidade do segredo HMAC previstos no plano. | Injetar falhas entre débito e resultado, antes do commit e após commit com perda de resposta. Comprovar saldo/resultado consistentes, retomada após reinício de reserva pendente há mais de 24 horas com reconhecimento do conteúdo e débito único, reprodução do resultado confirmado e ausência de retentativa automática insegura sem chave. |
+| T007 | Concluída | Implementar identificação opcional, normalização, HMAC com segredo persistente compartilhado, reserva durável com geração interna e execução com resultado na mesma transação do débito. Integrar ao endpoint. | Testes HTTP/MySQL cobrem P-07 a P-09: cabeçalho vazio ou UUID inválido retorna `400` sem reserva nem autorização; equivalência numérica; divergência de conteúdo; reprodução de aprovações e recusas após mudança do cartão ou reinício. Sem chave, chamadas continuam independentes; entradas inválidas e falhas não viram resultados concluídos. |
+| T008 | Concluída | Implementar comparação de conteúdo antes da espera, disputas e revalidação da geração sob bloqueio, prazo único, retenção, publicação de nova reserva após expiração e retomada exclusiva de pendências. | Testes coordenados entre contextos independentes comprovam P-08, P-10 e P-11: conteúdo divergente durante processamento retorna `CHAVE_IDEMPOTENCIA_REUTILIZADA`, inclusive após reutilização de chave expirada; mesmo conteúdo recebe resultado dentro da espera ou resposta transitória com cabeçalho correto no limite total de 5 segundos. Comprovar retenção de 24 horas, ausência de expiração de pendências e débito único. |
+| T009 | Concluída | Completar tratamento de deadlock, rollback, commit incerto e recuperação após falhas, respeitando os limites de retentativa e a continuidade do segredo HMAC previstos no plano. | Injetar falhas entre débito e resultado, antes do commit e após commit com perda de resposta. Comprovar saldo/resultado consistentes, retomada após reinício de reserva pendente há mais de 24 horas com reconhecimento do conteúdo e débito único, reprodução do resultado confirmado e ausência de retentativa automática insegura sem chave. |
 
 **Saída do bloco:** operação identificada reproduzível entre instâncias e após reinício, com falhas e expiração verificadas em MySQL.
+
+**Conclusão do bloco:** T007 a T009 concluídas e aceitas em 18/10/2026, após revisão dos fontes e das evidências de `evidencias-bloco-3-t008-final.zip`. O log de `.\mvnw.cmd clean verify` registra `BUILD SUCCESS`, código de saída 0 e 62 testes aprovados: 17 unitários e 45 de integração, sem falhas, erros ou testes ignorados, com MySQL 5.7.44. A restrição de fluxo passou. JaCoCo: 396/437 linhas (90,6%) e 68/92 ramos (73,9%).
+
+**Aceite comprovado:** identificação e reprodução duráveis, concorrência entre contextos independentes, divergência de conteúdo, retenção de 24 horas, publicação independente de nova reserva após expiração e retomada de pendências antigas. O prazo comum de cinco segundos preserva o tempo útil entre bloqueios sucessivos; os testes demonstram conclusão após espera parcial, reprodução na parte final da janela e resposta transitória com `Retry-After: 1`. Rollback e recuperação automática por chave após commit incerto preservam saldo e resultado, sem débito duplicado ou retentativa insegura sem chave.
+
+**Evidências examinadas:** `src/`, `pom.xml`, `target/surefire-reports/`, `target/failsafe-reports/`, `target/site/jacoco/`, `clean-verify-final.log` e `clean-verify-final-exit-code.txt`, reunidos no pacote citado. Os fontes correspondem aos apresentados pelo JaCoCo. O aceite decorre da inspeção desses arquivos; o revisor não reexecutou o Maven.
+
+Sem pendências impeditivas do Bloco 3. T010 e T011 permanecem pendentes.
+
 
 ## 5. Bloco 4 — Verificação integrada e entrega
 
