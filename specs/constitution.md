@@ -13,11 +13,11 @@
 - O domínio permanece independente de Spring, JPA, HTTP e banco de dados. A aplicação orquestra casos de uso por portas; adaptadores implementam integração, persistência e exposição REST. Dependências apontam para o interior.
 - SOLID e Clean Code orientam clareza, composição e testabilidade, sem estruturas além das necessárias.
 
-## 3. Restrição de fluxo
+## 3. Composição do fluxo
 
-- O código Java de autoria do projeto, incluindo testes, não pode utilizar `if`, `break` ou `continue`.
+- Compor o fluxo do código Java de autoria do projeto, incluindo testes, com `Optional`, operações de `Stream` com curto-circuito e expressões ternárias simples.
 - Preferir polimorfismo, composição e políticas explícitas, sem artifícios que ocultem condicionais e prejudiquem a legibilidade.
-- Dependências externas e scripts padronizados do Maven Wrapper ficam fora dessa restrição e não devem ser reescritos para atendê-la.
+- Dependências externas e scripts padronizados do Maven Wrapper ficam fora do escopo dessas diretrizes de fluxo e não devem ser reescritos para atendê-las.
 
 ## 4. Integridade, concorrência e idempotência
 

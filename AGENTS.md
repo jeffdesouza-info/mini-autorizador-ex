@@ -21,7 +21,7 @@
 
 - Use quatro espaços, pacotes em minúsculas, tipos em `UpperCamelCase`, métodos e atributos em `lowerCamelCase` e constantes em `UPPER_SNAKE_CASE`.
 - Prefira nomes do domínio e métodos coesos. Remova imports e código sem uso; evite abstrações sem aplicação concreta.
-- Revise as fronteiras arquiteturais e a restrição de fluxo da constituição em todo código Java produzido, inclusive testes.
+- Revise as fronteiras arquiteturais e a composição do fluxo por políticas polimórficas, `Optional` e operações de `Stream` em todo código Java produzido, inclusive testes.
 - Preserve os contratos públicos e adicione ou ajuste testes quando houver mudança de comportamento.
 
 ## Execução e verificação

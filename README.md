@@ -89,7 +89,7 @@ As duas respostas são `201` com `OK`. Na sequência acima e dentro da retençã
 
 ## Decisões e garantias
 
-- Organização por `cartao`, `transacao` e `idempotencia`, com domínio independente de frameworks, aplicação por portas e adaptadores para HTTP, segurança e persistência. Composição e políticas ordenadas atendem à restrição de não usar `if`, `break` ou `continue` no Java de produção e testes.
+- Organização por `cartao`, `transacao` e `idempotencia`, com domínio independente de frameworks, aplicação por portas e adaptadores para HTTP, segurança e persistência. A autorização compõe implementações de `AuthorizationPolicy` e usa `Stream.findFirst()` para selecionar a primeira recusa na ordem existência → senha → saldo. `Optional` encadeia resultados e alternativas; expressões ternárias simples resolvem decisões pontuais. Uma análise sintática automatizada verifica a estrutura de controle no Java de produção e testes.
 - Valores monetários usam `BigDecimal`. A autorização verifica existência, senha e saldo nessa ordem; recusas não alteram o saldo. As senhas persistidas usam BCrypt e só retornam nas respostas contratuais de criação, com os valores recebidos naquela chamada.
 - Transações InnoDB em `READ COMMITTED`, bloqueio de linha e atualização defensiva protegem débitos entre instâncias. A operação identificada confirma débito e resultado técnico na mesma transação; os bloqueios seguem a ordem idempotência → cartão.
 - A comparação idempotente usa HMAC-SHA-256 de cartão, senha e valor normalizado. `10` e `10.00` são equivalentes. O banco mantém reservas e resultados técnicos; não há histórico de negócio das transações.
@@ -108,14 +108,14 @@ Erros de entrada, autenticação e falhas técnicas não viram resultados conclu
 
 | Finalidade | Windows | Linux/macOS ou Git Bash |
 | --- | --- | --- |
-| Unitários e restrição de fluxo | `.\mvnw.cmd test` | `./mvnw test` |
+| Unitários e análise sintática | `.\mvnw.cmd test` | `./mvnw test` |
 | Suíte completa, pacote e JaCoCo | `.\mvnw.cmd clean verify` | `./mvnw clean verify` |
 
 As integrações exigem Docker e provisionam MySQL 5.7.44 por Testcontainers em bancos exclusivos, sem usar o banco local da API. O perfil de testes fornece um segredo sintético próprio. A primeira execução pode baixar Maven, dependências e imagens. Docker indisponível implica validação pendente, não aprovação das integrações.
 
 Relatórios: `target/surefire-reports/`, `target/failsafe-reports/` e `target/site/jacoco/index.html`.
 
-Verificação final de 18/10/2026: `clean verify` com código de saída 0 e **79 testes aprovados**, sem falhas, erros ou ignorados: 30 unitários/restrição de fluxo e 49 de integração. JaCoCo: **429/437 linhas (98,17%)** e **84/96 ramos (87,50%)**. Foram verificados contratos, precisão, persistência, concorrência entre contextos independentes, retenção, recuperação, rollback e ausência de débito duplicado.
+Verificação final de 18/10/2026: `clean verify` com código de saída 0 e **79 testes aprovados**, sem falhas, erros ou ignorados: 30 unitários (incluindo análise sintática) e 49 de integração. JaCoCo: **429/437 linhas (98,17%)** e **84/96 ramos (87,50%)**. Foram verificados contratos, precisão, persistência, concorrência entre contextos independentes, retenção, recuperação, rollback e ausência de débito duplicado.
 
 A evidência HTTP usa MockMvc com MVC e filtros de segurança reais, integrado ao MySQL. Reinício é exercitado por novos contextos Spring sobre o mesmo banco. O JAR executável foi gerado; uma execução adicional por `java -jar` não integra essa evidência. A consolidação documental conferiu fontes, configurações, log e relatórios recebidos, sem reexecutar o Maven.
 

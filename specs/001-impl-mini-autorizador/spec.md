@@ -4,7 +4,7 @@
 
 Disponibilizar uma API REST para criar cartões, consultar saldos e autorizar transações de débito, conforme `specs/constitution.md` e as decisões P-01 a P-12 consolidadas neste documento.
 
-A solução deve respeitar a constituição, inclusive sua base tecnológica, segurança e restrição de fluxo. A declaração do serviço MySQL em `docker/docker-compose.yml` deve ser preservada. Histórico de negócio das transações não é obrigatório; registros técnicos de idempotência são permitidos.
+A solução deve respeitar a constituição, inclusive sua base tecnológica, segurança e composição do fluxo por políticas, `Optional` e operações de `Stream`. A declaração do serviço MySQL em `docker/docker-compose.yml` deve ser preservada. Histórico de negócio das transações não é obrigatório; registros técnicos de idempotência são permitidos.
 
 ## 2. Requisitos funcionais
 

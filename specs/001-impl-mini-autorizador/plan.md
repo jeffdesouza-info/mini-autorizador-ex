@@ -16,7 +16,7 @@ Implementar [spec.md](spec.md), respeitando [constitution.md](../constitution.md
 - Usar campos diretos dos tipos padrão Java: `String` para número do cartão, senha recebida e hash; `BigDecimal` para saldo e valor solicitado. Preservar modelos, resultados, políticas, portas e DTOs com responsabilidade concreta; não criar um tipo próprio apenas para encapsular cada campo.
 - Centralizar as validações reutilizáveis em `ValidacaoCartao` e `RegrasMonetarias`, sem dependências de frameworks. Preservar as invariantes no domínio e na aplicação, inclusive em chamadas diretas aos casos de uso; distinguir saldo não negativo de débito positivo.
 - Coordenar persistência, senha e idempotência por portas. Aplicar políticas ordenadas conforme RF-04; retornar recusas como resultados, permitindo confirmar seu registro idempotente.
-- Usar composição e polimorfismo. Integrar ao `verify` uma verificação por tokens Java contra `if`, `break` e `continue` em produção e testes, acompanhada de revisão de legibilidade.
+- Usar composição de políticas polimórficas, encadeamento com `Optional`, operações de `Stream` com curto-circuito e expressões ternárias simples. Integrar ao `verify` a análise sintática automatizada da estrutura de controle em produção e testes, acompanhada de revisão de legibilidade.
 
 ## 3. Persistência
 
@@ -66,7 +66,7 @@ Sem cabeçalho, executar uma autorização independente. Permitir no máximo uma
 - Executar integrações em MySQL 5.7 exclusivo de testes, com as mesmas migrações e conexões, transações e contextos independentes. Evitar transação externa de teste que mascare commits.
 - Coordenar concorrência com barreiras e sinais; verificar espera, retomada, expiração e reinício preservando o banco. Cobrir conteúdo divergente durante execução, inclusive na nova reserva após expiração, e retomada de pendência com mais de 24 horas usando o mesmo segredo.
 - Injetar falhas entre débito e resultado, antes do commit e após commit com perda de resposta. Conferir saldo e registro durável, cobrindo os critérios do `spec.md`.
-- Configurar JaCoCo e executar `./mvnw verify` com integrações e restrição de fluxo. Examinar cobertura e cenários de aceite; percentuais altos não substituem a comprovação dos contratos. MySQL indisponível implica validação pendente explícita.
+- Configurar JaCoCo e executar `./mvnw verify` com integrações e análise sintática da estrutura de controle. Examinar cobertura e cenários de aceite; percentuais altos não substituem a comprovação dos contratos. MySQL indisponível implica validação pendente explícita.
 - Preservar, por execução de aceite, os relatórios completos de Surefire, Failsafe e JaCoCo, o código/configuração correspondente e o log do Maven fora de `target`. Informar resultados reais; execuções apenas relatadas devem ser distinguidas das evidências examinadas.
 - Entregar evidências, resultados reais e pendências da implementação. O assistente de documentação consolida instruções de execução e configuração no README e os estados em `tasks.md`, conforme a divisão de responsabilidades ali definida.
 
