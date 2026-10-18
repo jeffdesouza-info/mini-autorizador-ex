@@ -12,7 +12,9 @@ Implementar [spec.md](spec.md), respeitando [constitution.md](../constitution.md
 ## 2. Arquitetura e domínio
 
 - Preservar os pacotes `cartao`, `transacao` e `idempotencia` em `br.com.miniautorizador`, com `domain`, `application` e `adapter`; portas ficam na aplicação.
-- Modelar cartão, número, valor monetário e resultado de autorização no domínio independente de frameworks. Entidades JPA, DTOs e mapeamentos ficam nos adaptadores.
+- Manter cartão, resultados e políticas no domínio independente de frameworks. Entidades JPA, DTOs e mapeamentos ficam nos adaptadores.
+- Usar campos diretos dos tipos padrão Java: `String` para número do cartão, senha recebida e hash; `BigDecimal` para saldo e valor solicitado. Preservar modelos, resultados, políticas, portas e DTOs com responsabilidade concreta; não criar um tipo próprio apenas para encapsular cada campo.
+- Centralizar as validações reutilizáveis em `ValidacaoCartao` e `RegrasMonetarias`, sem dependências de frameworks. Preservar as invariantes no domínio e na aplicação, inclusive em chamadas diretas aos casos de uso; distinguir saldo não negativo de débito positivo.
 - Coordenar persistência, senha e idempotência por portas. Aplicar políticas ordenadas conforme RF-04; retornar recusas como resultados, permitindo confirmar seu registro idempotente.
 - Usar composição e polimorfismo. Integrar ao `verify` uma verificação por tokens Java contra `if`, `break` e `continue` em produção e testes, acompanhada de revisão de legibilidade.
 
@@ -32,10 +34,11 @@ Criar migrações em `src/main/resources/db/migration`. Flyway controla o esquem
 ## 4. HTTP e segurança
 
 - Validar DTOs, tipos JSON e UUID estritamente, impedindo coerções entre números e strings. Autenticar antes dos casos de uso. Cabeçalho de idempotência presente e vazio ou inválido segue o `400` de P-07, antes de qualquer reserva ou autorização.
+- Preservar precisão e escala na leitura JSON: configurar `spring.jackson.deserialization.use-big-decimal-for-floats=true` e `spring.jackson.datatype.json-node.strip-trailing-bigdecimal-zeroes=false`. Validar o limite de casas antes de normalizar, sem conversão intermediária para `double` ou `float`.
 - Configurar BASIC sem sessão nem formulário, com CSRF desabilitado. Preservar as credenciais do contrato e controlar o `401` sem corpo, inclusive em chamadas de navegador.
 - Implementar BCrypt por porta de senha. Compor respostas de criação com a entrada recebida, conforme P-05.
 - Centralizar a tradução de resultados e exceções para os contratos definidos. Formatar saldo com `toPlainString()` em escala 2; enviar literais sem serialização JSON.
-- Configurar segredos por ambiente e excluir senhas, credenciais e corpos sensíveis dos logs e registros técnicos.
+- Configurar segredos por ambiente e excluir senhas, credenciais e corpos sensíveis dos logs e registros técnicos. Ocultar senha e hash em `toString()` de modelos e DTOs; a senha original não integra o estado persistente do cartão.
 
 ## 5. Débito e concorrência
 
@@ -63,7 +66,9 @@ Sem cabeçalho, executar uma autorização independente. Permitir no máximo uma
 - Executar integrações em MySQL 5.7 exclusivo de testes, com as mesmas migrações e conexões, transações e contextos independentes. Evitar transação externa de teste que mascare commits.
 - Coordenar concorrência com barreiras e sinais; verificar espera, retomada, expiração e reinício preservando o banco. Cobrir conteúdo divergente durante execução, inclusive na nova reserva após expiração, e retomada de pendência com mais de 24 horas usando o mesmo segredo.
 - Injetar falhas entre débito e resultado, antes do commit e após commit com perda de resposta. Conferir saldo e registro durável, cobrindo os critérios do `spec.md`.
-- Configurar JaCoCo e executar `./mvnw verify` com integrações e restrição de fluxo. MySQL indisponível implica validação pendente explícita.
+- Configurar JaCoCo e executar `./mvnw verify` com integrações e restrição de fluxo. Examinar cobertura e cenários de aceite; percentuais altos não substituem a comprovação dos contratos. MySQL indisponível implica validação pendente explícita.
+- Preservar, por execução de aceite, os relatórios completos de Surefire, Failsafe e JaCoCo, o código/configuração correspondente e o log do Maven fora de `target`. Informar resultados reais; execuções apenas relatadas devem ser distinguidas das evidências examinadas.
 - Entregar evidências, resultados reais e pendências da implementação. O assistente de documentação consolida instruções de execução e configuração no README e os estados em `tasks.md`, conforme a divisão de responsabilidades ali definida.
 
 Referências técnicas de compatibilidade: [Hibernate — dialetos](https://docs.hibernate.org/orm/7.4/dialect/), [Connector/J 8.0.33](https://dev.mysql.com/doc/relnotes/connector-j/en/news-8-0-33.html) e [Flyway — MySQL](https://documentation.red-gate.com/flyway/reference/database-driver-reference/mysql).
+
