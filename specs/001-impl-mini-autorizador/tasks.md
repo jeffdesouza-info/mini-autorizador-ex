@@ -1,6 +1,6 @@
 # Tarefas — mini-autorizador-ex
 
-Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 a T009 estão concluídas; T010 e T011 permanecem pendentes. Os contratos e as decisões permanecem nas fontes citadas.
+Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../constitution.md) e [AGENTS.md](../../AGENTS.md). T001 a T011 estão concluídas; implementação e entrega documental encerradas em 18/10/2026. Os contratos e as decisões permanecem nas fontes citadas.
 
 ## 1. Execução por blocos
 
@@ -44,7 +44,7 @@ Executar [plan.md](plan.md), conforme [spec.md](spec.md), [constitution.md](../c
 
 **Evidências examinadas:** `src/`, `pom.xml`, `target/surefire-reports/`, `target/failsafe-reports/`, `target/site/jacoco/` e `mini-autorizador-clean-verify-t006.log`, reunidos no pacote citado. O aceite decorre da conferência desses arquivos; o revisor não reexecutou o Maven. O responsável também informou nova execução local de `clean verify` sem falhas.
 
-Sem pendências impeditivas do Bloco 2. A revisão geral e a documentação final permanecem em T010 e T011.
+Sem pendências impeditivas do Bloco 2. A conclusão da revisão geral e da documentação final está registrada no Bloco 4.
 
 ## 4. Bloco 3 — Idempotência e recuperação
 
@@ -62,18 +62,28 @@ Sem pendências impeditivas do Bloco 2. A revisão geral e a documentação fina
 
 **Evidências examinadas:** `src/`, `pom.xml`, `target/surefire-reports/`, `target/failsafe-reports/`, `target/site/jacoco/`, `clean-verify-final.log` e `clean-verify-final-exit-code.txt`, reunidos no pacote citado. Os fontes correspondem aos apresentados pelo JaCoCo. O aceite decorre da inspeção desses arquivos; o revisor não reexecutou o Maven.
 
-Sem pendências impeditivas do Bloco 3. T010 e T011 permanecem pendentes.
+Sem pendências impeditivas do Bloco 3. A conclusão de T010 e T011 está registrada no Bloco 4.
 
 
 ## 5. Bloco 4 — Verificação integrada e entrega
 
 | ID | Estado | Trabalho previsto | Aceite verificável |
 | --- | --- | --- | --- |
-| T010 | Pendente | Revisar fronteiras arquiteturais, legibilidade, APIs depreciadas, avisos de recursos e proteção de dados sensíveis. Executar `./mvnw verify`, corrigir falhas e conferir os seis grupos de aceite do `spec.md`. | Suíte unitária, HTTP e MySQL executada; cobertura JaCoCo examinada e lacunas relevantes corrigidas; restrição de fluxo aprovada em produção e testes; pacote gerado. Testes ausentes ou bloqueados não são apresentados como aprovados. |
-| T011 | Pendente | Consolidar o README com base no resultado verificado: preparação, configuração, execução, testes, exemplos e decisões relevantes. Atualizar o estado das tarefas com as evidências recebidas. | Instruções correspondem aos comandos e comportamentos comprovados; exemplos incluem chamadas com e sem chave; requisitos de segredo compartilhado e limites conhecidos estão claros, sem dados privados. |
+| T010 | Concluída | Revisar fronteiras arquiteturais, legibilidade, APIs depreciadas, avisos de recursos e proteção de dados sensíveis. Executar `./mvnw verify`, corrigir falhas e conferir os seis grupos de aceite do `spec.md`. | Suíte unitária, HTTP e MySQL executada; cobertura JaCoCo examinada e lacunas relevantes corrigidas; restrição de fluxo aprovada em produção e testes; pacote gerado. Testes ausentes ou bloqueados não são apresentados como aprovados. |
+| T011 | Concluída | Consolidar o README com base no resultado verificado: preparação, configuração, execução, testes, exemplos e decisões relevantes. Atualizar o estado das tarefas com as evidências recebidas. | Instruções correspondem aos comandos e comportamentos comprovados; exemplos incluem chamadas com e sem chave; requisitos de segredo compartilhado e limites conhecidos estão claros, sem dados privados. |
+
+**Conclusão de T010:** concluída e aceita em 18/10/2026 após conferência de `evidencias-bloco-4-t010.zip`. O log de `.\mvnw.cmd clean verify` registra `BUILD SUCCESS` e código de saída 0. Os XMLs confirmam 79 testes aprovados, sem falhas, erros ou ignorados: 30 unitários/restrição de fluxo e 49 integrações (6 de fundação e 43 HTTP/MySQL), com MySQL 5.7.44 real. JaCoCo: 429/437 linhas (98,17%) e 84/96 ramos (87,50%). Pacote executável gerado.
+
+**Revisão final:** fronteiras da aplicação e tradução HTTP ajustadas; APIs depreciadas e avisos de recursos revisados. A espera JDBC usa o tempo restante como timeout de rede, preservando a exceção original quando o rollback encontra conexão encerrada; a revalidação da geração/conteúdo e as asserções de prazo foram mantidas. Os seis grupos de aceite têm correspondência com testes aprovados, incluindo rollback antes do commit, recuperação por chave e ausência de débito duplicado. Senhas, hash e segredo HMAC permanecem protegidos.
+
+**Evidências examinadas:** fontes e configurações em `codigo/`, XMLs e relatórios completos em `relatorios/`, `clean-verify-final.log`, `clean-verify-final-exit-code.txt`, `matriz-aceite.csv`, `inventario.csv`, `resumo.md` e JAR em `pacote/`. A configuração da aplicação, o build, a declaração MySQL e o adaptador de prazo correspondem ao repositório consultado. O aceite decorre da inspeção das evidências, sem reexecução do Maven pelo revisor. HTTP foi exercitado com MockMvc, e reinício, por novos contextos Spring; não houve ensaio adicional de `java -jar`.
+
+**Limites registrados:** lacunas residuais de cobertura foram justificadas. Avisos de CDS, informação de suporte do Flyway ao MySQL legado e mensagens esperadas nos cenários de timeout/rollback não impediram o aceite. Não há verificações obrigatórias ausentes ou bloqueadas na execução final.
+
+**Conclusão de T011:** concluída em 18/10/2026. README consolidado com preparação, variáveis de ambiente, segredo HMAC obrigatório e compartilhado, execução Windows/Linux, testes, relatórios, contratos, exemplos com e sem chave, decisões e limites comprovados. Conteúdo conferido com fontes, configurações e evidências da T010; estados e registros deste arquivo atualizados. O README não identifica o cliente, não reproduz o material privado e não aponta para arquivos específicos de specs. Não foram alterados código, contratos, princípios, `AGENTS.md` ou constituição; não houve escrita no GitHub.
 
 Ao encerrar cada bloco, devolver um relatório curto com status, resultado, arquivos alterados, verificações executadas, localização das evidências e pendências. Na interrupção, indicar o próximo passo para retomada.
 
-A implementação está concluída após T001 a T010 verificadas e a entrega das evidências pelo executor. Nesse encerramento, informar a T011 como pendente do assistente de documentação. A conclusão integral da entrega ocorre após T001 a T011 verificadas.
+**Encerramento:** T001 a T010 verificadas e evidências entregues; T011 concluída pelo assistente de documentação. Implementação e entrega documental integral concluídas, sem pendências impeditivas. A aplicação destes documentos ao repositório permanece a cargo do responsável.
 
 
